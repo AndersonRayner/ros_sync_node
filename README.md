@@ -8,6 +8,7 @@ Code for running a hardware sync node with an Arduino.
 - Create a sync signal at 60 Hz and 30 Hz
   - Example (bad) code for this [here](https://github.com/aerorobotics/ONR_drone_spinnaker_ws/tree/master/Code/Arduino/sync_60Hz) which has a 60 Hz and 10 Hz loop
 - Output ROS message `std_msgs/Time.msg` of the time the sync signals were triggered
+  - Use the `rosserial` library (should be able to get it from the arduino libraries manager)
   - Can use a different message type if you find something better
 - Command the RGB LED (bonus feature)
   - Red: No ROS connection
