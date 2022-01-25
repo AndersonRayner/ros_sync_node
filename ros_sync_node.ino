@@ -2,9 +2,9 @@
 // Code for outputting sync signals.
 //    Designed for falling edge
 //
-//    60 Hz - Pin  8
-//    30 Hz - Pin  9
-//    10 Hz - Pin 10
+//    60 Hz - Pin 13
+//    30 Hz - Pin 11
+//    10 Hz - Pin  9
 // NeoPixel - Pin 16
 
 #include "ros.h"
