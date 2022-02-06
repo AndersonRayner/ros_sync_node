@@ -20,9 +20,9 @@ ros::Publisher rate_60Hz_pub("sync/rate_60Hz", &msg);
 ros::Publisher rate_30Hz_pub("sync/rate_30Hz", &msg);
 ros::Publisher rate_10Hz_pub("sync/rate_10Hz", &msg);
 
-int pin_60Hz =  8;
-int pin_30Hz =  9;
-int pin_10Hz = 10;
+int pin_60Hz = 13;
+int pin_30Hz = 11;
+int pin_10Hz =  9;
 
 int led_pin_   = 16;
 int led_count_ =  1;
@@ -79,11 +79,13 @@ void loop() {
   if ((counter % 2) == 0) rate_30Hz_pub.publish(&msg);
   if ((counter % 6) == 0) rate_10Hz_pub.publish(&msg);
 
-  // Update ROS
-  nh.spinOnce();
-
   // Wait a bit
-  delayMicroseconds(us_delay);
+  while (micros()-loop_start < us_delay)
+  {
+     // Update ROS
+     nh.spinOnce();
+  }
+  //delayMicroseconds(us_delay);
 
   // Write pins high
   digitalWrite(pin_60Hz, HIGH);
@@ -102,9 +104,12 @@ void loop() {
   // Loop timing and counting
   counter++;
   
-  while (micros() < loop_start + us_delay + us_delay)
+  while (micros()-loop_start < us_delay + us_delay)
   {
     // do nothing
+
+    // Update ROS
+     nh.spinOnce();
   }
 
 }
