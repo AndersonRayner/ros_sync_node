@@ -1,11 +1,12 @@
 
-// Code for outputting sync signals.
-//    Designed for falling edge
+// Code for outputting falling edge sync signals
+//    Designed for Waveshare RPi RP2040-Zero
+//    Compile as Raspberry Pi Pico
 //
 //    60 Hz - Pin 13
 //    30 Hz - Pin 11
 //    10 Hz - Pin  9
-// NeoPixel - Pin 16
+// NeoPixel - Pin 16 (built-in)
 
 #include "ros.h"
 #include "std_msgs/Time.h"
