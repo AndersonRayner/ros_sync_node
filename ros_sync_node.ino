@@ -32,19 +32,8 @@ Adafruit_NeoPixel strip(led_count_, led_pin_, NEO_GRB + NEO_KHZ800);
 
 void setup() {
   
-  // Setup the pins
-  pinMode(pin_60Hz, OUTPUT);   digitalWrite(pin_60Hz, HIGH);
-  pinMode(pin_30Hz, OUTPUT);   digitalWrite(pin_30Hz, HIGH);
-  pinMode(pin_10Hz, OUTPUT);   digitalWrite(pin_10Hz, HIGH);
-
   // Start the serial port
   Serial.begin(115200);
-
-  // Start the LED
-  strip.begin();
-  strip.setBrightness(255);
-  strip.setPixelColor(0, strip.Color(0,   0,   255));
-  strip.show();
 
   // Initialise ROS Node Handler
   nh.initNode();
@@ -53,6 +42,19 @@ void setup() {
   nh.advertise(rate_60Hz_pub);
   nh.advertise(rate_30Hz_pub);
   nh.advertise(rate_10Hz_pub);
+
+  // Start the LED
+  strip.begin();
+  strip.setBrightness(255);
+  strip.setPixelColor(0, strip.Color(0,   0,   255));
+  strip.show();
+  
+  // Setup the pins
+  pinMode(pin_60Hz, OUTPUT);   digitalWrite(pin_60Hz, HIGH);
+  pinMode(pin_30Hz, OUTPUT);   digitalWrite(pin_30Hz, HIGH);
+  pinMode(pin_10Hz, OUTPUT);   digitalWrite(pin_10Hz, HIGH);
+
+
   
 }
 
