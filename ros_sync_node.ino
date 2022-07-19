@@ -17,13 +17,13 @@ ros::NodeHandle  nh;
 
 std_msgs::Time msg;
 
+ros::Publisher rate_180Hz_pub("sync/rate_180Hz", &msg);
 ros::Publisher rate_60Hz_pub("sync/rate_60Hz", &msg);
 ros::Publisher rate_30Hz_pub("sync/rate_30Hz", &msg);
-ros::Publisher rate_10Hz_pub("sync/rate_10Hz", &msg);
 
-int pin_60Hz = 13;
-int pin_30Hz = 11;
-int pin_10Hz =  9;
+int pin_180Hz = 13;
+int pin_60Hz  = 11;
+int pin_30Hz  =  9;
 
 int led_pin_   = 16;
 int led_count_ =  1;
@@ -39,9 +39,9 @@ void setup() {
   nh.initNode();
 
   // Publishers
+  nh.advertise(rate_180Hz_pub);
   nh.advertise(rate_60Hz_pub);
   nh.advertise(rate_30Hz_pub);
-  nh.advertise(rate_10Hz_pub);
 
   // Start the LED
   strip.begin();
@@ -50,17 +50,15 @@ void setup() {
   strip.show();
   
   // Setup the pins
-  pinMode(pin_60Hz, OUTPUT);   digitalWrite(pin_60Hz, HIGH);
-  pinMode(pin_30Hz, OUTPUT);   digitalWrite(pin_30Hz, HIGH);
-  pinMode(pin_10Hz, OUTPUT);   digitalWrite(pin_10Hz, HIGH);
-
-
+  pinMode(pin_180Hz, OUTPUT);  digitalWrite(pin_180Hz, HIGH);
+  pinMode(pin_60Hz,  OUTPUT);  digitalWrite(pin_60Hz,  HIGH);
+  pinMode(pin_30Hz,  OUTPUT);  digitalWrite(pin_30Hz,  HIGH);
   
 }
 
 void loop() {
   
-  static const unsigned int us_delay = 8333;  // Time in us of 60 Hz / 2 
+  static const unsigned int us_delay = 2778;  // Time in us of 180 Hz / 2 
   static unsigned int counter = 0;
 
   unsigned long loop_start = micros();
@@ -68,19 +66,19 @@ void loop() {
   // Write pins LOW (start of the frame)
   msg.data = nh.now();
 
+  // 180 Hz
+  digitalWrite(pin_180Hz, LOW);
+  
   // 60 Hz  
-  digitalWrite(pin_60Hz, LOW); 
+  if ((counter % 3) == 0) digitalWrite(pin_60Hz, LOW); 
 
   // 30 Hz
-  if ((counter % 2) == 0) digitalWrite(pin_30Hz, LOW);
-  
-  // 10 Hz
-  if ((counter % 6) == 0) digitalWrite(pin_10Hz, LOW);
-  
+  if ((counter % 6) == 0) digitalWrite(pin_30Hz, LOW);
+   
   // Publish data (All messages should have the same time)
-  rate_60Hz_pub.publish(&msg);
-  if ((counter % 2) == 0) rate_30Hz_pub.publish(&msg);
-  if ((counter % 6) == 0) rate_10Hz_pub.publish(&msg);
+  rate_180Hz_pub.publish(&msg);
+  if ((counter % 3) == 0) rate_60Hz_pub.publish(&msg);
+  if ((counter % 6) == 0) rate_30Hz_pub.publish(&msg);
 
   // Wait a bit
   while (micros()-loop_start < us_delay)
@@ -91,9 +89,9 @@ void loop() {
   //delayMicroseconds(us_delay);
 
   // Write pins high
-  digitalWrite(pin_60Hz, HIGH);
-  digitalWrite(pin_30Hz, HIGH);
-  digitalWrite(pin_10Hz, HIGH);
+  digitalWrite(pin_180Hz, HIGH);
+  digitalWrite(pin_60Hz,  HIGH);
+  digitalWrite(pin_30Hz,  HIGH);
 
   // Set the LED colour
   if (nh.connected())
