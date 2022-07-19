@@ -3,9 +3,9 @@
 //    Designed for Waveshare RPi RP2040-Zero
 //    Compile as Raspberry Pi Pico
 //
-//    60 Hz - Pin 13
-//    30 Hz - Pin 11
-//    10 Hz - Pin  9
+//   180 Hz - Pin 13
+//    60 Hz - Pin 11
+//    30 Hz - Pin  9
 // NeoPixel - Pin 16 (built-in)
 
 #include "ros.h"
