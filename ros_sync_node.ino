@@ -9,7 +9,9 @@
 // NeoPixel - Pin 16 (built-in)
 
 #include "ros.h"
+
 #include "std_msgs/Time.h"
+#include "std_msgs/Bool.h"
 
 #include <Adafruit_NeoPixel.h>
 
@@ -17,10 +19,12 @@ ros::NodeHandle  nh;
 
 std_msgs::Time msg;
 
+// Publishers
 ros::Publisher rate_180Hz_pub("sync/rate_180Hz", &msg);
 ros::Publisher rate_60Hz_pub("sync/rate_60Hz", &msg);
 ros::Publisher rate_30Hz_pub("sync/rate_30Hz", &msg);
 
+// Pin Assignments
 int pin_180Hz = 13;
 int pin_60Hz  = 11;
 int pin_30Hz  =  9;
@@ -28,8 +32,24 @@ int pin_30Hz  =  9;
 int led_pin_   = 16;
 int led_count_ =  1;
 
+// Callback for handling sensor health
+bool sensors_ok = false;
+uint32_t _t_last_sensors_ok = 0;
+
+void sensorOk_Callback(const std_msgs::Bool& msg)
+{
+    sensors_ok = msg.data; 
+    _t_last_sensors_ok = millis();
+    
+    return;
+}
+
+ros::Subscriber<std_msgs::Bool> sub("sensors_ok", &sensorOk_Callback);
+
+// LED
 Adafruit_NeoPixel strip(led_count_, led_pin_, NEO_GRB + NEO_KHZ800);
 
+// Main 
 void setup() {
   
   // Start the serial port
@@ -42,6 +62,9 @@ void setup() {
   nh.advertise(rate_180Hz_pub);
   nh.advertise(rate_60Hz_pub);
   nh.advertise(rate_30Hz_pub);
+
+  //Subscriber
+  nh.subscribe(sub);
 
   // Start the LED
   strip.begin();
@@ -96,10 +119,24 @@ void loop() {
   // Set the LED colour
   if (nh.connected())
   {
-      strip.setPixelColor(0, strip.Color(0,   255,   0));
-  } else {
-      strip.setPixelColor(0, strip.Color(255,   0,   0));
+    if ((sensors_ok) &&
+        (millis() - 2UL*1000 < _t_last_sensors_ok) )
+    {
+        // Sensors are all running nominally
+        strip.setPixelColor(0, strip.Color(0,   255,   0)); // Green
+    }
+    else
+    {
+        // ROS is running, but sensors aren't at the correct rate
+        strip.setPixelColor(0, strip.Color(255,  100,   0)); // Amber
+    }  
   }
+  else
+  {
+      // No connection to ROS
+      strip.setPixelColor(0, strip.Color(255,   0,   0)); // Red
+  }
+  
   strip.show();
 
   // Loop timing and counting
