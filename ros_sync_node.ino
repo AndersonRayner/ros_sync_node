@@ -8,10 +8,13 @@
 //    30 Hz - Pin  9
 // NeoPixel - Pin 16 (built-in)
 
-#include "ros.h"
+#include <ros.h>
 
-#include "std_msgs/Time.h"
-#include "std_msgs/Bool.h"
+#include <std_msgs/Time.h>
+#include <std_msgs/Bool.h>
+
+#include "sync_msgs/sensorHealth.h"
+#include "sync_msgs/sensorHealthArray.h"
 
 #include <Adafruit_NeoPixel.h>
 
@@ -29,25 +32,26 @@ int pin_180Hz = 13;
 int pin_60Hz  = 11;
 int pin_30Hz  =  9;
 
-int led_pin_   = 16;
-int led_count_ =  1;
+int led_pins_[]   = { 16, 15 };
+const uint n_strips_ = sizeof(led_pins_) / sizeof(led_pins_[0]);
+uint16_t n_leds_ = 1;
 
 // Callback for handling sensor health
-bool sensors_ok = false;
-uint32_t _t_last_sensors_ok = 0;
+bool system_health_ = false;
+uint32_t _t_last_sensors_msg_ = 0;
 
-void sensorOk_Callback(const std_msgs::Bool& msg)
+void systemHealth_Callback(const sync_msgs::sensorHealthArray& msg)
 {
-    sensors_ok = msg.data; 
-    _t_last_sensors_ok = millis();
+    system_health_ = msg.system; 
+    _t_last_sensors_msg_ = millis();
     
     return;
 }
 
-ros::Subscriber<std_msgs::Bool> sub("sensors_ok", &sensorOk_Callback);
+ros::Subscriber<sync_msgs::sensorHealthArray> health_sub("/sensor_health", &systemHealth_Callback);
 
 // LED
-Adafruit_NeoPixel strip(led_count_, led_pin_, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip[n_strips_];
 
 // Main 
 void setup() {
@@ -64,14 +68,26 @@ void setup() {
   nh.advertise(rate_30Hz_pub);
 
   //Subscriber
-  nh.subscribe(sub);
+  nh.subscribe(health_sub);
 
-  // Start the LED
-  strip.begin();
-  strip.setBrightness(255);
-  strip.setPixelColor(0, strip.Color(0,   0,   255));
-  strip.show();
-  
+  // Start the LED strips
+  uint32_t color = Adafruit_NeoPixel::Color(0,0,255);
+
+  for (uint ii=0; ii<n_strips_; ii++)
+  {
+    // Setup
+    strip[ii].setPin(led_pins_[ii]);
+    strip[ii].updateLength(n_leds_);
+    strip[ii].updateType(NEO_GRB + NEO_KHZ800);
+
+    // Start strip
+    strip[ii].begin();
+    strip[ii].setBrightness(255);
+    strip[ii].setPixelColor(0, color);
+    strip[ii].show();
+
+  }
+   
   // Setup the pins
   pinMode(pin_180Hz, OUTPUT);  digitalWrite(pin_180Hz, HIGH);
   pinMode(pin_60Hz,  OUTPUT);  digitalWrite(pin_60Hz,  HIGH);
@@ -109,7 +125,6 @@ void loop() {
      // Update ROS
      nh.spinOnce();
   }
-  //delayMicroseconds(us_delay);
 
   // Write pins high
   digitalWrite(pin_180Hz, HIGH);
@@ -117,27 +132,42 @@ void loop() {
   digitalWrite(pin_30Hz,  HIGH);
 
   // Set the LED colour
+  uint32_t color = Adafruit_NeoPixel::Color(0,0,255);
+
   if (nh.connected())
   {
-    if ((sensors_ok) &&
-        (millis() - 2UL*1000 < _t_last_sensors_ok) )
+    if (millis() - 2UL*1000 < _t_last_sensors_msg_)
+    {
+      // Timeout
+      color = Adafruit_NeoPixel::Color(200, 200, 200); // White
+    }
+    else if (system_health_ == sync_msgs::sensorHealth::HEALTHY)
     {
         // Sensors are all running nominally
-        strip.setPixelColor(0, strip.Color(0,   255,   0)); // Green
+        color = Adafruit_NeoPixel::Color(0,255, 0); // Green
     }
-    else
+    else if (system_health_ == sync_msgs::sensorHealth::UNHEALTHY)
     {
         // ROS is running, but sensors aren't at the correct rate
-        strip.setPixelColor(0, strip.Color(255,  100,   0)); // Amber
-    }  
+        color = Adafruit_NeoPixel::Color(255, 100, 0); // Amber
+    }
+    else //(system_health_ == sync_msgs::sensorHealth::MISSING)
+    {
+        // Sensors are missing or state is unknown
+        color = Adafruit_NeoPixel::Color(255, 0, 0); // Red      
+    } 
   }
   else
   {
       // No connection to ROS
-      strip.setPixelColor(0, strip.Color(255,   0,   0)); // Red
+      color = Adafruit_NeoPixel::Color(0, 0, 255); // Blue
   }
   
-  strip.show();
+  for (uint ii=0; ii<n_strips_; ii++)
+  {
+    strip[ii].fill(color);
+    strip[ii].show();
+  }
 
   // Loop timing and counting
   counter++;
@@ -150,4 +180,17 @@ void loop() {
      nh.spinOnce();
   }
 
+}
+
+
+
+// Running on core1
+void setup1() {
+  delay(5000);
+  Serial.printf("C1: Red leader standing by...\n");
+}
+
+void loop1() {
+  Serial.printf("C1: Stay on target...\n");
+  delay(500);
 }
