@@ -35,6 +35,7 @@ int pin_30Hz  =  9;
 int led_pins_[]   = { 16, 15 };
 const uint n_strips_ = sizeof(led_pins_) / sizeof(led_pins_[0]);
 uint16_t n_leds_ = 1;
+bool update_led_ = false;
 
 // Callback for handling sensor health
 bool system_health_ = false;
@@ -52,6 +53,8 @@ ros::Subscriber<sync_msgs::sensorHealthArray> health_sub("/sensor_health", &syst
 
 // LED
 Adafruit_NeoPixel strip[n_strips_];
+uint32_t color = Adafruit_NeoPixel::Color(0,0,255);
+uint32_t color_old = color;
 
 // Main 
 void setup() {
@@ -66,28 +69,7 @@ void setup() {
   nh.advertise(rate_180Hz_pub);
   nh.advertise(rate_60Hz_pub);
   nh.advertise(rate_30Hz_pub);
-
-  //Subscriber
-  nh.subscribe(health_sub);
-
-  // Start the LED strips
-  uint32_t color = Adafruit_NeoPixel::Color(0,0,255);
-
-  for (uint ii=0; ii<n_strips_; ii++)
-  {
-    // Setup
-    strip[ii].setPin(led_pins_[ii]);
-    strip[ii].updateLength(n_leds_);
-    strip[ii].updateType(NEO_GRB + NEO_KHZ800);
-
-    // Start strip
-    strip[ii].begin();
-    strip[ii].setBrightness(255);
-    strip[ii].setPixelColor(0, color);
-    strip[ii].show();
-
-  }
-   
+ 
   // Setup the pins
   pinMode(pin_180Hz, OUTPUT);  digitalWrite(pin_180Hz, HIGH);
   pinMode(pin_60Hz,  OUTPUT);  digitalWrite(pin_60Hz,  HIGH);
@@ -123,7 +105,7 @@ void loop() {
   while (micros()-loop_start < us_delay)
   {
      // Update ROS
-     nh.spinOnce();
+    //  nh.spinOnce();
   }
 
   // Write pins high
@@ -132,7 +114,7 @@ void loop() {
   digitalWrite(pin_30Hz,  HIGH);
 
   // Set the LED colour
-  uint32_t color = Adafruit_NeoPixel::Color(0,0,255);
+  color = Adafruit_NeoPixel::Color(0,0,255);
 
   if (nh.connected())
   {
@@ -162,35 +144,73 @@ void loop() {
       // No connection to ROS
       color = Adafruit_NeoPixel::Color(0, 0, 255); // Blue
   }
-  
-  for (uint ii=0; ii<n_strips_; ii++)
-  {
-    strip[ii].fill(color);
-    strip[ii].show();
-  }
 
+  
   // Loop timing and counting
+  update_led_ = true;
   counter++;
   
   while (micros()-loop_start < us_delay + us_delay)
   {
-    // do nothing
-
     // Update ROS
-     nh.spinOnce();
+    //  nh.spinOnce();
   }
 
 }
 
+// core1 does all the non-time critical stuff
+//  Subscribers, LED
 
-
-// Running on core1
 void setup1() {
-  delay(5000);
-  Serial.printf("C1: Red leader standing by...\n");
+
+  // Start a little later
+  delay(500);
+
+  // Subscriber on core2
+  nh.subscribe(health_sub);
+
+  // Start the LED strips
+  color = Adafruit_NeoPixel::Color(0,0,255);
+
+  for (uint ii=0; ii<n_strips_; ii++)
+  {
+    // Setup
+    strip[ii].setPin(led_pins_[ii]);
+    strip[ii].updateLength(n_leds_);
+    strip[ii].updateType(NEO_GRB + NEO_KHZ800);
+
+    // Start strip
+    strip[ii].begin();
+    strip[ii].setBrightness(255);
+    strip[ii].setPixelColor(0, color);
+    strip[ii].show();
+
+  }
 }
 
 void loop1() {
-  Serial.printf("C1: Stay on target...\n");
-  delay(500);
+
+  if (update_led_)
+  {
+    if (color_old != color)
+    {
+      // Update the LED
+      for (uint ii=0; ii<n_strips_; ii++)
+      {
+        strip[ii].fill(color);
+        strip[ii].show();
+      }
+    }
+
+    // Update color_old
+    color_old = color;
+
+    // Set the update led flag back
+    update_led_ = false;
+
+  }
+
+  // Check for ROS updates
+  nh.spinOnce();
+
 }
