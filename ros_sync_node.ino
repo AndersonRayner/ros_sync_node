@@ -131,7 +131,11 @@ void loop() {
 void setup1()
 {
   // Wait for the first core to update everything
-  while (!core0_init);
+  while (core0_init == 0)
+  {
+    // do nothing
+    delay(500);
+  }
 
   // core0 intialized
 

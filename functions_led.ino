@@ -30,10 +30,9 @@ void init_leds()
 
 
   // Flash LEDs
-  update_leds(Adafruit_NeoPixel::Color(0xFF,0x00,0x00)); delay(500);
-  update_leds(Adafruit_NeoPixel::Color(0x00,0xFF,0x00)); delay(500);
-  update_leds(Adafruit_NeoPixel::Color(0x00,0x00,0xFF)); delay(500);
-  update_leds(Adafruit_NeoPixel::Color(0xFF,0x00,0x90));
+  update_leds(Adafruit_NeoPixel::Color(0xFF,0x00,0x00)); delay(1000);
+  update_leds(Adafruit_NeoPixel::Color(0x00,0xFF,0x00)); delay(1000);
+  update_leds(Adafruit_NeoPixel::Color(0x00,0x00,0xFF)); delay(1000);
 
   // All done
   return;
