@@ -32,11 +32,6 @@ int pin_180Hz = 13;
 int pin_60Hz  = 11;
 int pin_30Hz  =  9;
 
-int led_pins_[]   = { 16 };//, 15 };
-const uint n_strips_ = sizeof(led_pins_) / sizeof(led_pins_[0]);
-uint16_t n_leds_ = 1;
-bool update_led_ = false;
-
 // Callback for handling sensor health
 bool system_health_ = false;
 uint32_t _t_last_sensors_msg_ = 0;
@@ -51,8 +46,6 @@ void systemHealth_Callback(const sync_msgs::sensorHealthArray& msg)
 
 ros::Subscriber<sync_msgs::sensorHealthArray> health_sub("/sensor_status", &systemHealth_Callback);
 
-// LED
-Adafruit_NeoPixel strip[n_strips_];
 
 // Other
 bool core0_init = false;
@@ -79,23 +72,8 @@ void setup() {
   pinMode(pin_60Hz,  OUTPUT);  digitalWrite(pin_60Hz,  HIGH);
   pinMode(pin_30Hz,  OUTPUT);  digitalWrite(pin_30Hz,  HIGH);
 
-  // Start the LED strips
-  uint32_t color = Adafruit_NeoPixel::Color(0xFF,0x00,0x90); // Magenta
-
-  for (uint ii=0; ii<n_strips_; ii++)
-  {
-    // Setup
-    strip[ii].setPin(led_pins_[ii]);
-    strip[ii].updateLength(n_leds_);
-    strip[ii].updateType(NEO_GRB + NEO_KHZ800);
-
-    // Start strip
-    strip[ii].begin();
-    strip[ii].setBrightness(255);
-
-  }
-
-  update_leds(color);
+  // Init LEDs
+  init_leds();
 
   // Initialization complete
   nh.loginfo("Sync node hardware initialized");
@@ -149,22 +127,6 @@ void loop() {
   }
 
 }
-
-void update_leds(uint32_t color)
-{
-
-  // Update the LED
-  for (uint ii=0; ii<n_strips_; ii++)
-  {
-    strip[ii].fill(color);
-    strip[ii].show();
-  }
-
-  // All done
-  return;
-
-}
-
 
 void setup1()
 {
