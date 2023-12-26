@@ -32,7 +32,7 @@ int pin_180Hz = 13;
 int pin_60Hz  = 11;
 int pin_30Hz  =  9;
 
-int led_pins_[]   = { 16, 15 };
+int led_pins_[]   = { 16 };//, 15 };
 const uint n_strips_ = sizeof(led_pins_) / sizeof(led_pins_[0]);
 uint16_t n_leds_ = 1;
 bool update_led_ = false;
@@ -49,12 +49,10 @@ void systemHealth_Callback(const sync_msgs::sensorHealthArray& msg)
     return;
 }
 
-ros::Subscriber<sync_msgs::sensorHealthArray> health_sub("/sensor_health", &systemHealth_Callback);
+ros::Subscriber<sync_msgs::sensorHealthArray> health_sub("/sensor_status", &systemHealth_Callback);
 
 // LED
 Adafruit_NeoPixel strip[n_strips_];
-uint32_t color = Adafruit_NeoPixel::Color(0,0,255);
-uint32_t color_old = color;
 
 // Main 
 void setup() {
@@ -69,12 +67,36 @@ void setup() {
   nh.advertise(rate_180Hz_pub);
   nh.advertise(rate_60Hz_pub);
   nh.advertise(rate_30Hz_pub);
+
+  // Subscribers
+  nh.subscribe(health_sub);
  
   // Setup the pins
   pinMode(pin_180Hz, OUTPUT);  digitalWrite(pin_180Hz, HIGH);
   pinMode(pin_60Hz,  OUTPUT);  digitalWrite(pin_60Hz,  HIGH);
   pinMode(pin_30Hz,  OUTPUT);  digitalWrite(pin_30Hz,  HIGH);
-  
+
+  // Start the LED strips
+  uint32_t color = Adafruit_NeoPixel::Color(0xFF,0x00,0x90); // Magenta
+
+  for (uint ii=0; ii<n_strips_; ii++)
+  {
+    // Setup
+    strip[ii].setPin(led_pins_[ii]);
+    strip[ii].updateLength(n_leds_);
+    strip[ii].updateType(NEO_GRB + NEO_KHZ800);
+
+    // Start strip
+    strip[ii].begin();
+    strip[ii].setBrightness(255);
+
+  }
+
+  update_leds(color);
+
+  // Initialization complete
+  nh.loginfo("Sync node hardware initialized");
+
 }
 
 void loop() {
@@ -105,7 +127,7 @@ void loop() {
   while (micros()-loop_start < us_delay)
   {
      // Update ROS
-    //  nh.spinOnce();
+     nh.spinOnce();
   }
 
   // Write pins high
@@ -114,11 +136,11 @@ void loop() {
   digitalWrite(pin_30Hz,  HIGH);
 
   // Set the LED colour
-  color = Adafruit_NeoPixel::Color(0,0,255);
+  uint32_t color = Adafruit_NeoPixel::Color(0,0,0);
 
   if (nh.connected())
   {
-    if (millis() - 2UL*1000 < _t_last_sensors_msg_)
+    if (millis() - 2UL*1000 > _t_last_sensors_msg_)
     {
       // Timeout
       color = Adafruit_NeoPixel::Color(200, 200, 200); // White
@@ -133,7 +155,7 @@ void loop() {
         // ROS is running, but sensors aren't at the correct rate
         color = Adafruit_NeoPixel::Color(255, 100, 0); // Amber
     }
-    else //(system_health_ == sync_msgs::sensorHealth::MISSING)
+    else
     {
         // Sensors are missing or state is unknown
         color = Adafruit_NeoPixel::Color(255, 0, 0); // Red      
@@ -145,72 +167,40 @@ void loop() {
       color = Adafruit_NeoPixel::Color(0, 0, 255); // Blue
   }
 
+  // Update LEDs
+  update_leds(color);
   
   // Loop timing and counting
-  update_led_ = true;
   counter++;
   
   while (micros()-loop_start < us_delay + us_delay)
   {
     // Update ROS
-    //  nh.spinOnce();
+     nh.spinOnce();
   }
 
 }
 
-// core1 does all the non-time critical stuff
-//  Subscribers, LED
+void update_leds(uint32_t color)
+{
+  // Push out the new color if required
+  static uint32_t color_old = 0; 
 
-void setup1() {
-
-  // Start a little later
-  delay(500);
-
-  // Subscriber on core2
-  nh.subscribe(health_sub);
-
-  // Start the LED strips
-  color = Adafruit_NeoPixel::Color(0,0,255);
-
-  for (uint ii=0; ii<n_strips_; ii++)
+  if (color_old != color)
   {
-    // Setup
-    strip[ii].setPin(led_pins_[ii]);
-    strip[ii].updateLength(n_leds_);
-    strip[ii].updateType(NEO_GRB + NEO_KHZ800);
-
-    // Start strip
-    strip[ii].begin();
-    strip[ii].setBrightness(255);
-    strip[ii].setPixelColor(0, color);
-    strip[ii].show();
-
-  }
-}
-
-void loop1() {
-
-  if (update_led_)
-  {
-    if (color_old != color)
+    // Update the LED
+    for (uint ii=0; ii<n_strips_; ii++)
     {
-      // Update the LED
-      for (uint ii=0; ii<n_strips_; ii++)
-      {
-        strip[ii].fill(color);
-        strip[ii].show();
-      }
+      strip[ii].fill(color);
+      strip[ii].show();
     }
-
-    // Update color_old
-    color_old = color;
-
-    // Set the update led flag back
-    update_led_ = false;
-
   }
 
-  // Check for ROS updates
-  nh.spinOnce();
+  // Update color_old
+  color_old = color;
+
+  // All done
+  return;
 
 }
+
