@@ -33,14 +33,13 @@ int pin_60Hz  = 11;
 int pin_30Hz  =  9;
 
 // Callback for handling sensor health
-bool system_health_ = false;
+uint8_t system_health_ = sync_msgs::sensorHealth::UNKNOWN;
 uint32_t _t_last_sensors_msg_ = 0;
 
 void systemHealth_Callback(const sync_msgs::sensorHealthArray& msg)
 {
-    system_health_ = msg.system; 
+    system_health_ = msg.system;
     _t_last_sensors_msg_ = millis();
-    
     return;
 }
 
