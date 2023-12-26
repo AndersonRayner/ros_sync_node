@@ -54,6 +54,9 @@ ros::Subscriber<sync_msgs::sensorHealthArray> health_sub("/sensor_status", &syst
 // LED
 Adafruit_NeoPixel strip[n_strips_];
 
+// Other
+bool core0_init = false;
+
 // Main 
 void setup() {
   
@@ -96,6 +99,7 @@ void setup() {
 
   // Initialization complete
   nh.loginfo("Sync node hardware initialized");
+  core0_init = true;
 
 }
 
@@ -135,41 +139,6 @@ void loop() {
   digitalWrite(pin_60Hz,  HIGH);
   digitalWrite(pin_30Hz,  HIGH);
 
-  // Set the LED colour
-  uint32_t color = Adafruit_NeoPixel::Color(0,0,0);
-
-  if (nh.connected())
-  {
-    if (millis() - 2UL*1000 > _t_last_sensors_msg_)
-    {
-      // Timeout
-      color = Adafruit_NeoPixel::Color(200, 200, 200); // White
-    }
-    else if (system_health_ == sync_msgs::sensorHealth::HEALTHY)
-    {
-        // Sensors are all running nominally
-        color = Adafruit_NeoPixel::Color(0,255, 0); // Green
-    }
-    else if (system_health_ == sync_msgs::sensorHealth::UNHEALTHY)
-    {
-        // ROS is running, but sensors aren't at the correct rate
-        color = Adafruit_NeoPixel::Color(255, 100, 0); // Amber
-    }
-    else
-    {
-        // Sensors are missing or state is unknown
-        color = Adafruit_NeoPixel::Color(255, 0, 0); // Red      
-    } 
-  }
-  else
-  {
-      // No connection to ROS
-      color = Adafruit_NeoPixel::Color(0, 0, 255); // Blue
-  }
-
-  // Update LEDs
-  update_leds(color);
-  
   // Loop timing and counting
   counter++;
   
@@ -183,24 +152,68 @@ void loop() {
 
 void update_leds(uint32_t color)
 {
-  // Push out the new color if required
-  static uint32_t color_old = 0; 
 
-  if (color_old != color)
+  // Update the LED
+  for (uint ii=0; ii<n_strips_; ii++)
   {
-    // Update the LED
-    for (uint ii=0; ii<n_strips_; ii++)
-    {
-      strip[ii].fill(color);
-      strip[ii].show();
-    }
+    strip[ii].fill(color);
+    strip[ii].show();
   }
-
-  // Update color_old
-  color_old = color;
 
   // All done
   return;
 
 }
 
+
+void setup1()
+{
+  // Wait for the first core to update everything
+  while (!core0_init);
+
+  // core0 intialized
+
+}
+
+void loop1()
+{
+
+ // Set the LED colour
+  uint32_t color = Adafruit_NeoPixel::Color(0,0,0);
+
+  if (nh.connected())
+  {
+    if (millis() - 2UL*1000 > _t_last_sensors_msg_)
+    {
+      // Timeout
+      color = Adafruit_NeoPixel::Color(200, 200, 200); // White
+    }
+    else if (system_health_ == sync_msgs::sensorHealth::HEALTHY)
+    {
+      // Sensors are all running nominally
+      color = Adafruit_NeoPixel::Color(0,255, 0); // Green
+    }
+    else if (system_health_ == sync_msgs::sensorHealth::UNHEALTHY)
+    {
+      // ROS is running, but sensors aren't at the correct rate
+      color = Adafruit_NeoPixel::Color(255, 100, 0); // Amber
+    }
+    else
+    {
+      // Sensors are missing or state is unknown
+      color = Adafruit_NeoPixel::Color(255, 0, 0); // Red      
+    } 
+  }
+  else
+  {
+    // No connection to ROS
+    color = Adafruit_NeoPixel::Color(0, 0, 255); // Blue
+  }
+
+  // Update LEDs
+  update_leds(color);
+
+  // Sleep for a little bit
+  delay(200);
+  
+}
