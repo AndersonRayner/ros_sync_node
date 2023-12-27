@@ -1,0 +1,14 @@
+topics:
+  example_sensor_1:
+    name: 'Example Sensor 1'
+    topic: '/sensor_1'
+    window: 5
+    min: 4
+    max: 6
+  example_sensor_2:
+    name: 'Example Sensor 2'
+    topic: '/sensor_2'
+    window: 30
+    min: 28
+    max: 32
+

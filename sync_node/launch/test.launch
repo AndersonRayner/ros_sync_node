@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="node_delay"                default="0.0" /> 
+
+    <!-- Base node -->
+    <include file="$(find sync_node)/launch/sync_node.launch">
+        <arg name="topics_config"      value="$(find sync_node)/config/test.yaml"/>
+    </include>
+
+    <!-- Topic Faker -->
+    <node pkg="sync_node" type="topic_faker.py" name="topic_faker_node"
+          respawn="true"
+          respawn_delay="5"      
+          launch-prefix="bash -c 'sleep $(arg node_delay); $0 $@' ">
+    </node>
+
+</launch>
