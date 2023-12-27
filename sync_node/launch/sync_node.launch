@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="node_delay"           default="0.0" /> 
+    <arg name="topics_config"        default="$(find sync_node)/config/example.yaml" />
+
+    <node pkg="rosserial_python" type="serial_node.py" name="sync_node"
+          output="screen"
+          respawn="true"
+          respawn_delay="5"
+          launch-prefix="bash -c 'sleep $(arg node_delay); $0 $@'">
+        <param name="port"              type="string"               value="/dev/ttyArduino"/>
+        <param name="baud"              type="int"                  value="115200"/>
+    </node>
+
+    <node pkg="sync_node" type="sensor_status_node.py" name="sensor_status_monitor_node"
+          respawn="true"
+          respawn_delay="5"
+          output="screen"
+          launch-prefix="bash -c 'sleep $(arg node_delay); $0 $@' ">
+
+        <!-- Load topics -->
+        <rosparam command="load" file="$(arg topics_config)" />
+
+    </node>
+
+</launch>

@@ -1,0 +1,19 @@
+topics:
+  sensor_5Hz:
+    name: '5 Hz Sensor'
+    topic: '/sensor_5Hz'
+    window: 5
+    min: 4
+    max: 6
+  sensor_30Hz:
+    name: '30 Hz Sensor'
+    topic: '/sensor_30Hz'
+    window: 30
+    min: 28
+    max: 32
+  sensor_60Hz:
+    name: '60 Hz Sensor'
+    topic: '/sensor_60Hz'
+    window: 30
+    min: 55
+    max: 65
