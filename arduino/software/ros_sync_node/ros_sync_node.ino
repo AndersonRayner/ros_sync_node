@@ -117,8 +117,8 @@ void loggerStatus_Callback(const std_msgs::Bool& msg) {
   return;
 }
 
-ros::Subscriber<sync_msgs::sensorHealthArray> health_sub("/sensor_status", &systemHealth_Callback);
-ros::Subscriber<std_msgs::Bool> recordStart_sub("/river/record_rosbag/status", &loggerStatus_Callback);
+ros::Subscriber<sync_msgs::sensorHealthArray> health_sub("sensor_status", &systemHealth_Callback);
+ros::Subscriber<std_msgs::Bool> recordStart_sub("record_rosbag/status", &loggerStatus_Callback);
 
 // Other
 bool core0_init = false;
