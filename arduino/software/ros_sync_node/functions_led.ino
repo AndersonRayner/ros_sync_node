@@ -28,7 +28,6 @@ void init_leds()
   strip_external_.begin();
   strip_external_.setBrightness(255);
 
-
   // Flash LEDs
   update_leds(Adafruit_NeoPixel::Color(0xFF,0x00,0x00)); delay(1000);
   update_leds(Adafruit_NeoPixel::Color(0x00,0xFF,0x00)); delay(1000);
