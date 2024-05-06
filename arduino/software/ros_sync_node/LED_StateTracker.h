@@ -10,14 +10,17 @@ public:
   void set_mode(LED_MODE mode) {
     led_mode_ = mode;
   };
+
   void set_color(uint8_t red, uint8_t green, uint8_t blue) {
     red_ = red;
     green_ = green;
     blue_ = blue;
   };
+
   void set_max_brightness(uint8_t max_brightness) {
     max_brightness_ = max_brightness;
   };
+
   uint32_t get_color() {
     uint8_t max_brightness = max_brightness_;
 
@@ -61,5 +64,4 @@ private:
   uint32_t max_brightness_ = 0xFF;
   uint32_t t_next_change_ = 0;
   bool led_flash_state_ = 0;
-
 };
