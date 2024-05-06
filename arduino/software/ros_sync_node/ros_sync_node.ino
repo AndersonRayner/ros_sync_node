@@ -17,9 +17,9 @@
 #include "sync_msgs/sensorHealthArray.h"
 
 #include <Adafruit_NeoPixel.h>
+#include "LED_StateTracker.h"
 
-ros::NodeHandle  nh;
-
+ros::NodeHandle nh;
 std_msgs::Time msg;
 
 // Publishers
@@ -29,29 +29,41 @@ ros::Publisher rate_30Hz_pub("sync/rate_30Hz", &msg);
 
 // Pin Assignments
 int pin_180Hz = 13;
-int pin_60Hz  = 11;
-int pin_30Hz  =  9;
+int pin_60Hz = 11;
+int pin_30Hz = 9;
 
 // Callback for handling sensor health
 uint8_t system_health_ = sync_msgs::sensorHealth::UNKNOWN;
 uint32_t _t_last_sensors_msg_ = 0;
 
-void systemHealth_Callback(const sync_msgs::sensorHealthArray& msg)
-{
-    system_health_ = msg.system;
-    _t_last_sensors_msg_ = millis();
-    return;
+// LED tracking
+LED_StateTracker ledState_;
+
+void systemHealth_Callback(const sync_msgs::sensorHealthArray& msg) {
+  system_health_ = msg.system;
+  _t_last_sensors_msg_ = millis();
+  return;
 }
 
-ros::Subscriber<sync_msgs::sensorHealthArray> health_sub("/sensor_status", &systemHealth_Callback);
+void loggerStatus_Callback(const std_msgs::Bool& msg) {
+  if (msg.data) {
+    ledState_.set_mode(LED_StateTracker::LED_MODE::Flashing);
+  } else {
+    ledState_.set_mode(LED_StateTracker::LED_MODE::Solid);
+  }
 
+  return;
+}
+
+ros::Subscriber<sync_msgs::sensorHealthArray> health_sub("sensor_status", &systemHealth_Callback);
+ros::Subscriber<std_msgs::Bool> recordStart_sub("record_rosbag/status", &loggerStatus_Callback);
 
 // Other
 bool core0_init = false;
 
-// Main 
+// Main
 void setup() {
-  
+
   // Start the serial port
   Serial.begin(115200);
 
@@ -65,120 +77,100 @@ void setup() {
 
   // Subscribers
   nh.subscribe(health_sub);
- 
-  // Setup the pins
-  pinMode(pin_180Hz, OUTPUT);  digitalWrite(pin_180Hz, HIGH);
-  pinMode(pin_60Hz,  OUTPUT);  digitalWrite(pin_60Hz,  HIGH);
-  pinMode(pin_30Hz,  OUTPUT);  digitalWrite(pin_30Hz,  HIGH);
+  nh.subscribe(recordStart_sub);
 
-  // Init LEDs
-  init_leds();
+  // Setup the pins
+  pinMode(pin_180Hz, OUTPUT);
+  digitalWrite(pin_180Hz, HIGH);
+  pinMode(pin_60Hz, OUTPUT);
+  digitalWrite(pin_60Hz, HIGH);
+  pinMode(pin_30Hz, OUTPUT);
+  digitalWrite(pin_30Hz, HIGH);
 
   // Initialization complete
   nh.loginfo("Sync node hardware initialized");
   core0_init = true;
-
 }
 
 void loop() {
-  
-  static const unsigned int us_delay = 2778;  // Time in us of 180 Hz / 2 
+
+  static const unsigned int us_delay = 2778;  // Time in us of 180 Hz / 2
   static unsigned int counter = 0;
 
   unsigned long loop_start = micros();
 
-  // Write pins LOW (start of the frame)
+  // Start of frame
   msg.data = nh.now();
-
-  // 180 Hz
-  digitalWrite(pin_180Hz, LOW);
   
-  // 60 Hz  
-  if ((counter % 3) == 0) digitalWrite(pin_60Hz, LOW); 
+  digitalWrite(pin_180Hz, LOW);                          // 180 Hz (IMU is on falling edge)
+  if ((counter % 3) == 0) digitalWrite(pin_60Hz, HIGH);  //  60 Hz (Thermal is on rising edge)
+  if ((counter % 6) == 0) digitalWrite(pin_30Hz, LOW);   //  30 Hz (EO is on falling edge)
 
-  // 30 Hz
-  if ((counter % 6) == 0) digitalWrite(pin_30Hz, LOW);
-   
   // Publish data (All messages should have the same time)
   rate_180Hz_pub.publish(&msg);
   if ((counter % 3) == 0) rate_60Hz_pub.publish(&msg);
   if ((counter % 6) == 0) rate_30Hz_pub.publish(&msg);
 
   // Wait a bit
-  while (micros()-loop_start < us_delay)
-  {
-     // Update ROS
-     nh.spinOnce();
+  while (micros() - loop_start < us_delay) {
+    // Update ROS
+    nh.spinOnce();
   }
 
-  // Write pins high
+  // Invert pins
   digitalWrite(pin_180Hz, HIGH);
-  digitalWrite(pin_60Hz,  HIGH);
-  digitalWrite(pin_30Hz,  HIGH);
+  if ((counter % 3) == 1) digitalWrite(pin_60Hz, LOW);
+  if ((counter % 6) == 3) digitalWrite(pin_30Hz, HIGH);
 
   // Loop timing and counting
   counter++;
-  
-  while (micros()-loop_start < us_delay + us_delay)
-  {
+
+  while (micros() - loop_start < us_delay + us_delay) {
     // Update ROS
-     nh.spinOnce();
+    nh.spinOnce();
   }
-
 }
 
-void setup1()
-{
-  // Wait for the first core to update everything
-  while (core0_init == 0)
-  {
+void setup1() {
+  // Wait for core0 to initialize
+  do {
     // do nothing
-    delay(500);
-  }
+    delay(1000);
+  } while (core0_init == 0);
 
-  // core0 intialized
+  // Init LEDs
+  init_leds();
 
+  // core1 intialized
 }
 
-void loop1()
-{
+void loop1() {
 
- // Set the LED colour
-  uint32_t color = Adafruit_NeoPixel::Color(0,0,0);
+  // Set the LED colour
 
-  if (nh.connected())
-  {
-    if (millis() - 2UL*1000 > _t_last_sensors_msg_)
-    {
+  if (nh.connected()) {
+    if (millis() - 2UL * 1000 > _t_last_sensors_msg_) {
       // Timeout
-      color = Adafruit_NeoPixel::Color(200, 200, 200); // White
-    }
-    else if (system_health_ == sync_msgs::sensorHealth::HEALTHY)
-    {
+      ledState_.set_color(200, 200, 200);  // White
+    } else if (system_health_ == sync_msgs::sensorHealth::HEALTHY) {
       // Sensors are all running nominally
-      color = Adafruit_NeoPixel::Color(0,255, 0); // Green
-    }
-    else if (system_health_ == sync_msgs::sensorHealth::UNHEALTHY)
-    {
+      ledState_.set_color(0, 255, 0);  // Green
+    } else if (system_health_ == sync_msgs::sensorHealth::UNHEALTHY) {
       // ROS is running, but sensors aren't at the correct rate
-      color = Adafruit_NeoPixel::Color(255, 100, 0); // Amber
-    }
-    else
-    {
+      ledState_.set_color(255, 100, 0);  // Amber
+    } else {
       // Sensors are missing or state is unknown
-      color = Adafruit_NeoPixel::Color(255, 0, 0); // Red      
-    } 
-  }
-  else
-  {
+      ledState_.set_color(255, 0, 0);  // Red
+    }
+  } else {
     // No connection to ROS
-    color = Adafruit_NeoPixel::Color(0, 0, 255); // Blue
+    ledState_.set_color(0, 0, 255);                         // Blue
+    ledState_.set_mode(LED_StateTracker::LED_MODE::Solid);  // Assuming logging has stopped
   }
 
   // Update LEDs
-  update_leds(color);
+  update_leds(ledState_.get_color());
 
   // Sleep for a little bit
-  delay(200);
-  
+  delay(20);
 }

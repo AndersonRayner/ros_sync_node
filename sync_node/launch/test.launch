@@ -6,7 +6,7 @@
     <!-- Base node -->
     <include file="$(find sync_node)/launch/sync_node.launch">
         <arg name="topics_config"      value="$(find sync_node)/config/test.yaml"/>
-        <arg name="arduino_port"       value="/dev/ttyACM5"/>
+        <arg name="arduino_port"       value="/dev/ttyACM1"/>
     </include>
 
     <!-- Topic Faker -->
